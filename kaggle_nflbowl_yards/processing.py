@@ -11,10 +11,37 @@ Class Processor():
         from sklearn.model_selection import train_test_split
         from tensorflow.keras import *
         import tensorflow
+        self.dict_wind_direction = {
+                                        'east': 'e', 
+                                        'north': 'n', 
+                                        'northwest': 'nw',
+                                        'southwest': 'sw', 
+                                        'northeast': 'ne', 
+                                        'south': 's', 
+                                        'west-southwest': 'wsw', 
+                                        'south southeast': 'sse', 
+                                        'west': 'w', 
+                                        'northeast': 'ne', 
+                                        'w-nw': 'wnw', 
+                                        'south southwest': 'ssw', 
+                                        'southeast': 'se',
+                                        'west northwest': 'wnw',
+                                        'east north east': 'ene', 
+                                        'east southeast': 'ese',
+                                        'north east': 'ne', 
+                                        'north/northwest': 'nnw',
+                                        'n-ne': 'nne', 
+                                        'w-sw': 'wsw', 
+                                        's-sw': 'ssw', 
+                                        'south west': 'sw', 
+                                        'south, southeast': 'sse', 
+                                        'southerly': 's'
+        }
 
     def load_data(DATA_PATH = '../raw_data'):
         self.train = pd.read_csv(f'{DATA_PATH}/train.csv')
         self.train_cat = self.train.select_dtypes(include=['object'])
+        return self.train
     
     # transforms serie into a binary type if team plays at home or away
     def proc_team(x):
@@ -25,8 +52,189 @@ Class Processor():
         min,sec,msec = x.split(':')
         return int(min) + int(sec)/60 + int(msec)/3600
 
-    # creates a binary type column if possession happens in the field position of the team
+    # creates a binary type column if possession team has the ball in its field position
+    # FIeldPosition and PossessionTEam columns are dropped
     def possession_in_fieldPosition(df):
         df['PossessionInFieldPosition'] = df.FieldPosition == df.PossessionTeam
         df['PossessionInFieldPosition'] = df['PossessionInFieldPosition'].apply(lambda x : 1 if x else 0)
         return df.drop(columns = ['FieldPosition','PossessionTeam'])
+
+    # One Hot Encoding of the offense formation column
+    def oneHotEncoding_offense_formation(df):
+        offense_formation_dummies = pd.get_dummies(df.OffenseFormation, columns=df.OffenseFormation.unique())
+        return pd.concat([df.drop('OffenseFormation', axis=1),offense_formation_dummies], axis=1)
+    
+    # One Hot Encoding of the positions
+    def oneHotEncoding_position(df):
+        position_dummies = pd.get_dummies(df.Position, columns=df.Position.unique())
+        return pd.concat([df.drop('Position', axis=1),position_dummies], axis=1)
+
+    #creates a binary column if the play direction is left or right
+    def proc_play_direction(x):
+        return 1 if x == 'left' else 0
+    
+    # creates time delta series for handoff and players' age
+    def proc_time_handoff_snap_and_player_age(df):
+        seconds_in_year = 3600*24*365.25
+        df['TimeDeltaHandoff'] = (df.TimeHandoff.apply(lambda x : datetime.strptime(x,'%Y-%m-%dT%H:%M:%S.%fZ'))
+                            - df.TimeSnap.apply(lambda x : datetime.strptime(x,'%Y-%m-%dT%H:%M:%S.%fZ')))
+        df['TimeDeltaHandoff'] = df['TimeDeltaHandoff'].apply(lambda x : x.total_seconds()/seconds_in_year)
+        df['PlayerAge'] = (df.TimeHandoff.apply(lambda x : datetime.strptime(x,'%Y-%m-%dT%H:%M:%S.%fZ'))
+                            - df.PlayerBirthDate.apply(lambda x : datetime.strptime(x,'%m/%d/%Y')))
+        df['PlayerAge'] = df['PlayerAge'].apply(lambda x : x.total_seconds()/seconds_in_year)
+        return df.drop(columns=['TimeHandoff','TimeSnap','PlayerBirthDate'])
+
+    # format players' height into meters
+    def proc_player_height(x):
+        return float(f"{x.split('-')[0]}.{x.split('-')[1]}") * 30.48
+
+    # standardize stadium types
+    def convert_stadium_type_to_dict(text):
+        stadium_type_dict = {}
+        if str(text)=='nan':
+            return stadium_type_dict
+        if 'outdoor' in text.lower() or 'open' in text.lower() or 'heinz' in text.lower() \
+        or 'ourdoor' in text.lower() or 'outdor' in text.lower():
+            stadium_type_dict['outdoor'] = 1
+        if ('indoor' in text.lower() and 'open' not in text.lower()) or 'closed' in text.lower():
+            stadium_type_dict['indoor'] = 1
+        if 'retr' in text.lower():
+            stadium_type_dict['retractable'] = 1
+        return stadium_type_dict
+    
+    # One hot encoding of standardized stadium types
+    def oneHotEncoding_stadium_type(df):
+        bow_stadium_type = df.StadiumType.apply(lambda x : convert_stadium_type_to_dict(x))
+        vect = DictVectorizer(sparse=False)
+        vectors_stadium_types = vect.fit_transform(bow_stadium_type)
+        stadium_type_dummies = pd.DataFrame(vectors_stadium_types, columns=vect.get_feature_names())
+        return pd.concat([df.drop('StadiumType', axis=1), stadium_type_dummies], axis=1)
+
+    # standardize turfs type into Natural or Arftifical
+    def convert_turf(x):
+        return 'Natural' if x.lower() in ['grass','natural grass','natural','naturall grass'] else 'Artificial'
+
+    # creates the serie with binary values if turf is natural or not
+    def process_turf(df):
+        df['IsTurfNatural'] = df.Turf.apply(lambda x : 1 if convert_turf(x)=='Natural' else 0)
+        return df.drop('Turf', axis=1)
+
+    # standardize game weather types
+    def convert_game_weather_to_dict(text):
+        game_weather_dict = {}
+        if str(text)=='nan':
+            return game_weather_dict
+        if 'clear' in text.lower(): 
+            game_weather_dict['clear'] = 1
+        if 'warm' in text.lower():
+            game_weather_dict['warm'] = 1
+        if 'sun' in text.lower():
+            game_weather_dict['sunny'] = 1
+        if 'cloud' in text.lower() or 'coudy' in text.lower() or 'clouidy' in text.lower() or 'overcast' in text.lower():
+            game_weather_dict['cloud'] = 1
+        if 'indoor' in text.lower():
+            game_weather_dict['indoor'] = 1
+        if 'rain' in text.lower():
+            game_weather_dict['rain'] = 1
+        if 'shower' in text.lower():
+            game_weather_dict['shower'] = 1
+        if 'snow' in text.lower():
+            game_weather_dict['snow'] = 1
+        if 'cold' in text.lower():
+            game_weather_dict['cold'] = 1
+        if 'cool' in text.lower():
+            game_weather_dict['cool'] = 1
+        return game_weather_dict
+    
+    # One Hot Encoding of game weather types
+    def oneHotEncoding_game_weather(df):
+        bow_game_weather = df.GameWeather.apply(lambda x : convert_game_weather_to_dict(x))
+        vect = DictVectorizer(sparse=False)
+        vectors_game_weather = vect.fit_transform(bow_game_weather)
+        game_weather_dummies = pd.DataFrame(vectors_game_weather, columns=vect.get_feature_names())
+        return pd.concat([df.drop('GameWeather', axis=1), game_weather_dummies], axis=1)
+
+    # transform wind speed into numerical values and use average if many values are given
+    def process_wind_speed(x):
+        digits = [int(i) for i in str(x).lower().replace('mph','').replace('.0','').replace('-',' ').split(' ') if i.isnumeric()]
+        return sum(digits)/len(digits) if len(digits)>0 else 0
+    
+    # formating of the wind direction types
+    def process_wind_direction(x):
+        if isinstance(x,float) or x.isnumeric() or x.lower() in ['calm']:
+            return ''
+        return dict_wind_direction.get(x.lower().replace('from ',''), x.lower().replace('from ',''))
+    
+    #One Hot Encoding of the wind direction types
+    def oneHotEncoding_wind_direction(df):
+        wind_direction_dummies = pd.get_dummies(df.WindDirection.apply(lambda x : process_wind_direction(x)), columns=df.WindDirection.unique())
+        return pd.concat([df.drop('WindDirection', axis=1), wind_direction_dummies], axis=1)
+    
+    def drop_categorical_features(df):
+        return df.drop(columns=['DisplayName','OffensePersonnel','DefensePersonnel', 'PlayerCollegeName','HomeTeamAbbr','VisitorTeamAbbr','Stadium','Location'], axis=1)
+
+    # creates binary values serie if row is rusher player or not
+    def process_is_rusher(df):
+        df['IsRusher'] = df.NflId == df.NflIdRusher
+        df['IsRusher'] = df['IsRusher'].apply(lambda x : 1 if x else 0)
+        return df.drop(columns=['NflId','NflIdRusher'])
+
+    # replace null values with mean
+    def proc_orientation(df):
+        df.Orientation = df.Orientation.fillna(df.Orientation.mean())
+        return df
+    
+    # replace null values with mean
+    def proc_dir(df):
+        df.Dir = df.Dir.fillna(df.Dir.mean())
+        return df
+    
+    # replace null values with mean
+    def proc_defenders_box(df):
+        df.DefendersInTheBox = df.DefendersInTheBox.fillna(df.DefendersInTheBox.mean())
+        return df
+    
+    # replace null values with mean
+    def proc_temperature(df):
+        df.Temperature = df.Temperature.fillna(df.Temperature.mean())
+        return df
+        
+    # replace null values with mean
+    def proc_humidity(df):
+        df.Humidity = df.Humidity.fillna(df.Humidity.mean())
+        return df
+        
+    def drop_numerical_features(df):
+        return df.drop(columns=['GameId', 'PlayId', 'JerseyNumber','Season'], axis=1)
+    
+    def process_features(df_source = self.train):
+        df = df_source.copy()
+        df.Team = df.Team.apply(lambda x : proc_team(x))
+        df.GameClock = df.GameClock.apply(lambda x : proc_gameclock(x))
+        df = possession_in_fieldPosition(df)
+        df = oneHotEncoding_offense_formation(df)
+        df = oneHotEncoding_position(df)
+        df.PlayDirection = df.PlayDirection.apply(lambda x : proc_play_direction(x))
+        df = proc_time_handoff_snap_and_player_age(df)
+        df.PlayerHeight = df.PlayerHeight.apply(lambda x : proc_player_height(x))
+        df = oneHotEncoding_stadium_type(df)
+        df = process_turf(df)
+        df = oneHotEncoding_game_weather(df)
+        df.WindSpeed = df.WindSpeed.apply(lambda x : process_wind_speed(x))
+        df = oneHotEncoding_wind_direction(df)
+        df = process_is_rusher(df)
+        df = drop_categorical_features(df)
+        df = proc_orientation(df)
+        df = proc_dir(df)
+        df = proc_defenders_box(df)
+        df = proc_temperature(df)
+        df = proc_humidity(df)
+        df = drop_numerical_features(df)
+        return df
+    
+if __name__=='__main__':
+    processor = Processor()
+    train = processor.load_data()
+    print(train)
+    train_proc = processor.process_features()
+    print(train_proc)
