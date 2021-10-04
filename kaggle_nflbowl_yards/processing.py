@@ -6,9 +6,6 @@ import seaborn as sns
 from datetime import datetime
 import math
 from sklearn.feature_extraction import DictVectorizer
-from sklearn.model_selection import train_test_split
-from tensorflow.keras import *
-import tensorflow
 
 class Processor:
     
@@ -41,8 +38,9 @@ class Processor:
         }
 
     def load_data(self, DATA_PATH = os.getcwd()+'/raw_data/train.csv'):
-        self.train = pd.read_csv(DATA_PATH)
-        self.train_cat = self.train.select_dtypes(include=['object'])
+        data = pd.read_csv(DATA_PATH)
+        self.y = data.Yards
+        self.train = data.drop(columns='Yards')
         return self.train
     
     # transforms serie into a binary type if team plays at home or away
@@ -234,9 +232,15 @@ class Processor:
         df = self.drop_numerical_features(df)
         return df
     
+    def save_data(self, df, DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'):
+        df.to_csv(DIR_PATH + 'train_processed.csv')
+        self.y.to_csv(DIR_PATH + 'target_yards.csv')
+
+    
 if __name__=='__main__':
     processor = Processor()
     train = processor.load_data()
     print(train)
     train_proc = processor.process_features(train)
     print(train_proc)
+    processor.save_data(train_proc)
