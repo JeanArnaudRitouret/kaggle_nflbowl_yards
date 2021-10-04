@@ -1,16 +1,18 @@
-Class Processor():
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+import math
+from sklearn.feature_extraction import DictVectorizer
+from sklearn.model_selection import train_test_split
+from tensorflow.keras import *
+import tensorflow
 
-    def __init__():
-        import pandas as pd
-        import numpy as np
-        import matplotlib.pyplot as plt
-        import seaborn as sns
-        from datetime import datetime
-        import math
-        from sklearn.feature_extraction import DictVectorizer
-        from sklearn.model_selection import train_test_split
-        from tensorflow.keras import *
-        import tensorflow
+class Processor:
+    
+    def __init__(self):
         self.dict_wind_direction = {
                                         'east': 'e', 
                                         'north': 'n', 
@@ -39,7 +41,8 @@ Class Processor():
         }
 
     def load_data(DATA_PATH = '../raw_data'):
-        self.train = pd.read_csv(f'{DATA_PATH}/train.csv')
+        print(os.path.dirname())
+        self.train = pd.read_csv('../raw_data/train.csv')
         self.train_cat = self.train.select_dtypes(include=['object'])
         return self.train
     
@@ -160,10 +163,10 @@ Class Processor():
         return sum(digits)/len(digits) if len(digits)>0 else 0
     
     # formating of the wind direction types
-    def process_wind_direction(x):
+    def process_wind_direction(self, x):
         if isinstance(x,float) or x.isnumeric() or x.lower() in ['calm']:
             return ''
-        return dict_wind_direction.get(x.lower().replace('from ',''), x.lower().replace('from ',''))
+        return self.dict_wind_direction.get(x.lower().replace('from ',''), x.lower().replace('from ',''))
     
     #One Hot Encoding of the wind direction types
     def oneHotEncoding_wind_direction(df):
@@ -207,7 +210,7 @@ Class Processor():
     def drop_numerical_features(df):
         return df.drop(columns=['GameId', 'PlayId', 'JerseyNumber','Season'], axis=1)
     
-    def process_features(df_source = self.train):
+    def process_features(self, df_source):
         df = df_source.copy()
         df.Team = df.Team.apply(lambda x : proc_team(x))
         df.GameClock = df.GameClock.apply(lambda x : proc_gameclock(x))
@@ -236,5 +239,5 @@ if __name__=='__main__':
     processor = Processor()
     train = processor.load_data()
     print(train)
-    train_proc = processor.process_features()
+    train_proc = processor.process_features(train)
     print(train_proc)
