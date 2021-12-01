@@ -39,10 +39,17 @@ class Processor:
 
     def load_data(self, DATA_PATH = os.getcwd()+'/raw_data/train.csv'):
         data = pd.read_csv(DATA_PATH)
-        self.y = data.Yards
+        self.y = self.create_multiclass_target(data)
         self.train = data.drop(columns='Yards')
         return self.train
     
+    def create_multiclass_target(self, data):
+        a = np.zeros((data.shape[0],199))
+        for i in range(a.shape[0]):
+            for j in range(data.Yards[i]+99, 199):
+                a[i,j] = 1
+        return pd.DataFrame(a)
+
     # transforms serie into a binary type if team plays at home or away
     def proc_team(self, x):
         return 1 if x == 'home' else 0

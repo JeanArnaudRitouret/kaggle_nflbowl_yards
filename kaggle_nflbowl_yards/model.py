@@ -31,8 +31,8 @@ class Model():
         self.model.add(layers.Dense(30, input_dim=92, activation='relu')) 
         self.model.add(layers.Dense(20, activation='tanh'))
         self.model.add(layers.Dense(10, activation='relu')) 
-        self.model.add(layers.Dense(1, activation='linear'))
-        self.model.compile(loss='mse', optimizer='adam',metrics='accuracy')
+        self.model.add(layers.Dense(199, activation='softmax'))
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam',metrics='accuracy')
         return self.model.summary()
 
     def fit_evaluate(self):

@@ -1,3 +1,41 @@
+# path to the file to upload to GCP (the path to the file should be absolute or should match the directory where the make command is ran)
+# replace with your local path to the `train_1k.csv` and make sure to put the path between quotes
+PATH_DATA_PROCESSED="kaggle_nflbowl_yards/data/train_processed.csv"
+PATH_TARGET_PROCESSED="kaggle_nflbowl_yards/data/target_yards.csv"
+
+# bucket directory in which to store the uploaded file (`data` is an arbitrary name that we choose to use)
+BUCKET_FOLDER=data
+
+# name for the uploaded file inside of the bucket (we choose not to rename the file that we upload)
+BUCKET_FILE_NAME_DATA=$(shell basename ${PATH_DATA_PROCESSED})
+BUCKET_FILE_NAME_TARGET=$(shell basename ${PATH_TARGET_PROCESSED})
+
+# project id - replace with your GCP project id
+PROJECT_ID=meta-scanner-323307
+
+# bucket name - replace with your GCP bucket name
+BUCKET_NAME=kaggle-nfl-bowl-yards
+
+# choose your region from https://cloud.google.com/storage/docs/locations#available_locations
+REGION=europe-west1
+
+upload_data:
+	gsutil cp $(PATH_DATA_PROCESSED) gs://$(BUCKET_NAME)/$(BUCKET_FOLDER)/$(BUCKET_FILE_NAME_DATA)
+	gsutil cp $(PATH_TARGET_PROCESSED) gs://$(BUCKET_NAME)/$(BUCKET_FOLDER)/$(BUCKET_FILE_NAME_TARGET)
+
+set_project:
+	@gcloud config set project ${PROJECT_ID}
+
+create_bucket:
+	@gsutil mb -l ${REGION} -p ${PROJECT_ID} gs://${BUCKET_NAME}
+
+# path of the package
+PACKAGE_NAME = kaggle_nflbowl_yards
+FILENAME=processing
+
+run_locally:
+	@python -m ${PACKAGE_NAME}.${FILENAME}
+
 # ----------------------------------
 #          INSTALL & TEST
 # ----------------------------------
