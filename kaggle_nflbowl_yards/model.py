@@ -1,14 +1,18 @@
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from datetime import datetime
 import math
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import *
 import tensorflow
+import joblib
+
+
+BUCKET_NAME = 'kaggle-nfl-bowl-yards'
+BUCKET_TRAIN_DATA_PATH = 'data/train_processed.csv'
 
 class Model():
     
@@ -18,6 +22,11 @@ class Model():
     def load_data(self, DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'):
         self.train = pd.read_csv(DIR_PATH + 'train_processed.csv')
         self.y = pd.read_csv(DIR_PATH + 'target_yards.csv')
+        pass
+
+    def scale_data(self):
+        scaler = MinMaxScaler()
+        self.train = scaler.fit_transform(self.train)
         pass
 
     def train_test_split(self):
@@ -35,18 +44,23 @@ class Model():
         self.model.compile(loss='categorical_crossentropy', optimizer='adam',metrics='accuracy')
         return self.model.summary()
 
-    def fit_evaluate(self):
+    def train_model(self):
         self.model.fit(self.X_train, self.y_train, batch_size=32, epochs=10)
         self.evaluation = self.model.evaluate(self.X_test, self.y_test)
         return self.evaluation
 
+    def save_model(self):
+        joblib.dump(self.model, 'model.joblib')
+
 if __name__=='__main__':
     model = Model()
     model.load_data()
+    model.scale_data()
     model.train_test_split()
-    
     summary = model.construct_compile()
     print(summary)
     
-    evaluation = model.fit_evaluate()
+    evaluation = model.train_model()
     print(evaluation)
+
+    model.save_model()
