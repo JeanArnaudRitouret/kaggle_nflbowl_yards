@@ -1,4 +1,4 @@
-JOB_NAME = softmax_1
+JOB_NAME = softmax_6
 
 PACKAGE_NAME=kaggle_nflbowl_yards
 FILENAME=model
@@ -49,10 +49,6 @@ set_project:
 
 create_bucket:
 	@gsutil mb -l ${REGION} -p ${PROJECT_ID} gs://${BUCKET_NAME}
-
-# path of the package
-PACKAGE_NAME = kaggle_nflbowl_yards
-FILENAME=processing
 
 run_locally:
 	@python -m ${PACKAGE_NAME}.${FILENAME}

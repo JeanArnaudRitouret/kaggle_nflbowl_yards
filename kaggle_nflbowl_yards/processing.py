@@ -1,8 +1,6 @@
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
 from datetime import datetime
 import math
 from sklearn.feature_extraction import DictVectorizer
@@ -245,9 +243,11 @@ class Processor:
 
     
 if __name__=='__main__':
+    '''
     processor = Processor()
     train = processor.load_data()
     print(train)
     train_proc = processor.process_features(train)
     print(train_proc)
     processor.save_data(train_proc)
+    '''

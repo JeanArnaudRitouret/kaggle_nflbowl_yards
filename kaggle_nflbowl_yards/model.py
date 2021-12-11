@@ -9,19 +9,23 @@ from sklearn.preprocessing import MinMaxScaler
 from tensorflow.keras import *
 import tensorflow
 import joblib
+from google.cloud import storage
 
 
 BUCKET_NAME = 'kaggle-nfl-bowl-yards'
 BUCKET_TRAIN_DATA_PATH = 'data/train_processed.csv'
+BUCKET_TARGET_DATA_PATH = 'data/train_processed.csv'
+STORAGE_LOCATION = 'models/model_softmax.joblib'
 
 class Model():
     
     def __init__(self):
         pass
 
-    def load_data(self, DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'):
-        self.train = pd.read_csv(DIR_PATH + 'train_processed.csv')
-        self.y = pd.read_csv(DIR_PATH + 'target_yards.csv')
+    def load_data(self):
+        #DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'
+        self.train = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}")
+        self.y = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TARGET_DATA_PATH}")
         pass
 
     def scale_data(self):
@@ -45,19 +49,33 @@ class Model():
         return self.model.summary()
 
     def train_model(self):
+        print(self.X_train)
+        print(self.y_train)
         self.model.fit(self.X_train, self.y_train, batch_size=32, epochs=10)
         self.evaluation = self.model.evaluate(self.X_test, self.y_test)
         return self.evaluation
 
+    def upload_model_to_gcp(self):
+        client = storage.Client()
+        bucket = client.bucket(BUCKET_NAME)
+        blob = bucket.blob(STORAGE_LOCATION)
+        blob.upload_from_filename('model_softmax.joblib')
+
     def save_model(self):
-        joblib.dump(self.model, 'model.joblib')
+        joblib.dump(self.model, 'model_softmax.joblib')
+        self.upload_model_to_gcp()
 
 if __name__=='__main__':
     model = Model()
+    print('instantiate model')
     model.load_data()
+    print('load data')
     model.scale_data()
+    print('scale data')
     model.train_test_split()
+    print('train test split')
     summary = model.construct_compile()
+    print('construct compile')
     print(summary)
     
     evaluation = model.train_model()
