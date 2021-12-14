@@ -1,4 +1,4 @@
-JOB_NAME = softmax_6
+JOB_NAME = softmax_9
 
 PACKAGE_NAME=kaggle_nflbowl_yards
 FILENAME=model

@@ -42,16 +42,16 @@ class Model():
     def construct_compile(self):
         self.model = Sequential()
         self.model.add(layers.Dense(30, input_dim=91, activation='relu')) 
-        self.model.add(layers.Dense(20, activation='tanh'))
-        self.model.add(layers.Dense(10, activation='relu')) 
+        # self.model.add(layers.Dense(20, activation='tanh'))
+        # self.model.add(layers.Dense(10, activation='relu')) 
         self.model.add(layers.Dense(199, activation='softmax'))
-        self.model.compile(loss='categorical_crossentropy', optimizer='adam',metrics='accuracy')
+        self.model.compile(loss='categorical_crossentropy', optimizer='adam',metrics=['accuracy'])
         pass
 
     def train_model(self):
         print(self.X_train)
         print(self.y_train)
-        self.model.fit(self.X_train, self.y_train, batch_size=32, epochs=10)
+        self.model.fit(self.X_train, self.y_train, batch_size=32, epochs=2)
         self.evaluation = self.model.evaluate(self.X_test, self.y_test)
         pass
 
@@ -62,7 +62,8 @@ class Model():
         blob.upload_from_filename('model_softmax.joblib')
 
     def save_model(self):
-        joblib.dump(self.model, 'model_softmax.joblib')
+        # joblib.dump(self.model, 'model_softmax.joblib')
+        tensorflow.keras.models.save_model(self.model, 'model_softmax')
         self.upload_model_to_gcp()
 
 if __name__=='__main__':
