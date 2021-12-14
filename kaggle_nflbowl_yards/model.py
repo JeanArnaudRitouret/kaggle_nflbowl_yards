@@ -14,7 +14,7 @@ from google.cloud import storage
 
 BUCKET_NAME = 'kaggle-nfl-bowl-yards'
 BUCKET_TRAIN_DATA_PATH = 'data/train_processed.csv'
-BUCKET_TARGET_DATA_PATH = 'data/train_processed.csv'
+BUCKET_TARGET_DATA_PATH = 'data/target_processed.csv'
 STORAGE_LOCATION = 'models/model_softmax.joblib'
 
 class Model():
@@ -24,8 +24,8 @@ class Model():
 
     def load_data(self):
         #DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'
-        self.train = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}")
-        self.y = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TARGET_DATA_PATH}")
+        self.train = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TRAIN_DATA_PATH}", index_col=0)
+        self.y = pd.read_csv(f"gs://{BUCKET_NAME}/{BUCKET_TARGET_DATA_PATH}", index_col=0)
         pass
 
     def scale_data(self):
@@ -41,19 +41,19 @@ class Model():
     
     def construct_compile(self):
         self.model = Sequential()
-        self.model.add(layers.Dense(30, input_dim=92, activation='relu')) 
+        self.model.add(layers.Dense(30, input_dim=91, activation='relu')) 
         self.model.add(layers.Dense(20, activation='tanh'))
         self.model.add(layers.Dense(10, activation='relu')) 
         self.model.add(layers.Dense(199, activation='softmax'))
         self.model.compile(loss='categorical_crossentropy', optimizer='adam',metrics='accuracy')
-        return self.model.summary()
+        pass
 
     def train_model(self):
         print(self.X_train)
         print(self.y_train)
         self.model.fit(self.X_train, self.y_train, batch_size=32, epochs=10)
         self.evaluation = self.model.evaluate(self.X_test, self.y_test)
-        return self.evaluation
+        pass
 
     def upload_model_to_gcp(self):
         client = storage.Client()
@@ -67,18 +67,34 @@ class Model():
 
 if __name__=='__main__':
     model = Model()
-    print('instantiate model')
+    print('instantiate model\n')
+
     model.load_data()
-    print('load data')
+    print('load data\n')
+
     model.scale_data()
-    print('scale data')
-    model.train_test_split()
-    print('train test split')
-    summary = model.construct_compile()
-    print('construct compile')
-    print(summary)
+    print('scale data\n')
+
+    print('scaled train')
+    print(model.train)
+    print('\n')
     
-    evaluation = model.train_model()
-    print(evaluation)
+    model.train_test_split()
+    print('train test split\n')
+    
+    model.construct_compile()
+    print('construct compile\n')
+    
+    print('summary')
+    print(model.model.summary())
+    print('\n')
+    
+    print('train model')
+    model.train_model()
+    print('\n')
+
+    print('evaluation')
+    print(model.evaluation)
+    print('\n')
 
     model.save_model()

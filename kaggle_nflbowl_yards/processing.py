@@ -239,7 +239,7 @@ class Processor:
     
     def save_data(self, df, DIR_PATH = os.getcwd()+'/kaggle_nflbowl_yards/data/'):
         df.to_csv(DIR_PATH + 'train_processed.csv')
-        self.y.to_csv(DIR_PATH + 'target_yards.csv')
+        self.y.to_csv(DIR_PATH + 'target_processed.csv')
 
     
 if __name__=='__main__':
